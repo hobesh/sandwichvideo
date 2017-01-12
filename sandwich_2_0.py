@@ -128,7 +128,7 @@ def get_video_record_endpoints(view):
         video_endpoint_dict[projectinfo_dict["Name"]] = record_endpoint
         
     return video_endpoint_dict
-    
+
 def updateLatestcut(video,cut):
     record_endpoints = get_video_record_endpoints("Sandwich Editorial")
     api_url = atVideos + "/" + record_endpoints[video]
@@ -141,6 +141,18 @@ def updateLatestcut(video,cut):
     else: 
         return "ERROR " + str(r.status_code)
 
+def get_ss_time(air_video):
+    records_list = getViewRecords(atVideos,"Sandwich Editorial",["Name","Screenshot Offset"])
+    return_value = False
+    for r in records_list:
+        try:
+            if str(r["fields"]["Name"]) == str(air_video):
+                return_value = r["fields"]["Screenshot Offset"]
+        except KeyError:
+            pass
+    
+    return return_value
+
 def update_airtable_screenshot(screenshot_url,air_video):
     print "This is the video we've matched to add the screenshot: " +air_video
     record_endpoints = get_video_record_endpoints("Sandwich Editorial")
@@ -149,12 +161,10 @@ def update_airtable_screenshot(screenshot_url,air_video):
     headers = {'Authorization': 'Bearer ' + api_key, "Content-type": "application/json"}
     r = requests.patch(api_url, headers=headers, data=data)
     json_data = json.loads(r.text)
-    print json_data
     if r.status_code == 200:
         return "Thanks for adding a Screenshot."
     else: 
         return "ERROR " + str(r.status_code)
-
 
 def updateLatestcut2(video,cut):
     record_endpoints = get_video_record_endpoints("Sandwich Editorial")
@@ -194,6 +204,37 @@ def getAllRecords(table_url, custom_fields):
                 break
     
     return record_List
+
+def getViewRecords(table_url, view, custom_fields):
+    if len(custom_fields) <= 1:
+        print "ERROR: You must pass at least 2 fields in the custom_fields parameter"
+        record_List = []
+    else:
+        api_url = table_url
+        record_List = []
+        headers = {'Authorization': 'Bearer ' + api_key, "Content-type": "application/json"}
+        data = {"view": view, "fields": custom_fields}
+        offset = False
+        runs = 1
+        while 1:
+            if offset:
+                data["offset"] = offset
+            r = requests.get(api_url, headers=headers, params=data)
+            if r.status_code == 200:
+                pass
+            else: 
+                print "ERROR " + str(r.status_code)
+                print r.text
+            json_data = json.loads(r.text)
+            for client in json_data["records"]:
+                record_List.append(client)
+            if "offset" in json_data:
+                runs = runs + 1
+                offset = json_data["offset"]
+            else:
+                print "Record list finished after %d runs. %d total records added." %(runs,len(record_List))
+                break
     
+    return record_List
 
     
