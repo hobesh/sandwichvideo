@@ -2,9 +2,8 @@
 
 print "Sandwich V2.0 loaded..."
 
-import requests
-import json
-import datetime
+import requests, json, datetime
+from fuzzwuzzy import process
 
 class Client:
     def __init__(self, record):
@@ -56,9 +55,11 @@ def get_auth(csv_path):
     
 authy = get_auth('/Volumes/Sandwich/assets/python/auth.csv')
 api_key = authy['airtable sandwich projects']['api_key']
+shots_api_key = authy['airtable sandwich shots']['api_key']
 atProjects = authy['airtable sandwich projects']['api_url']
 atVideos = authy['airtable sandwich videos']['api_url']
 atClients = authy['airtable sandwich clients']['api_url']
+atShots = ['airtable sandwich shots']['api_url']
 
 
 
@@ -129,6 +130,21 @@ def get_video_record_endpoints(view):
         
     return video_endpoint_dict
 
+def get_shot_record_endpoints(view):
+    fields = ["Name"]
+    params = {"api_key": api_key, "view": view}
+
+    r = requests.get(atShots, params)
+    json_data = json.loads(r.text)
+    records_array = json_data["records"]
+
+    record_endpoint_dict = {}
+    for project in records_array:
+        record_endpoint = project["id"]
+        projectinfo_dict = project["fields"]
+        record_endpoint_dict[projectinfo_dict["Name"]] = record_endpoint
+    return record_endpoint_dict
+
 def updateLatestcut(video,cut):
     record_endpoints = get_video_record_endpoints("Sandwich Editorial")
     api_url = atVideos + "/" + record_endpoints[video]
@@ -165,6 +181,43 @@ def update_airtable_screenshot(screenshot_url,air_video):
         return "Thanks for adding a Screenshot."
     else: 
         return "ERROR " + str(r.status_code)
+
+def update_shot_screenshot(screenshot_url,shot):
+    print "This is the shot we've matched to for that screenshot: " +shot
+    record_endpoints = get_shot_record_endpoints("All Shots")
+    api_url = atShots + "/" + record_endpoints[shot]
+    data = '{"fields": {"Screenshot": [{"url":"' + screenshot_url + '"}]}}'
+    headers = {'Authorization': 'Bearer ' + api_key, "Content-type": "application/json"}
+    r = requests.patch(api_url, headers=headers, data=data)
+    json_data = json.loads(r.text)
+    if r.status_code == 200:
+        return "Thanks for adding a Screenshot."
+    else:
+        return "ERROR " + str(r.status_code)
+
+def update_shot(path, db_link):
+    # pass the path + db link to this function to update that shot in airtable
+    record_endpoints = get_shot_record_endpoints("Working Shots")
+    path_chunks = path.split("/")
+    for key in record_endpoints:
+        results = process.extract(key, path_chunks)
+        match, score = results[0]
+        if score == 100:
+            # ask airtable for record
+            matched_shot = key
+            api_url = atShots + "/" + record_endpoints[key]
+            print "Got a match.  Breaking..."
+            break
+
+    data = '{"fields": {"Latest Comp":"' + path + '","Dropbox Link":"' + db_link + '","Status": "Ready To Review"}}'
+    headers = {'Authorization': 'Bearer ' + api_key, "Content-type": "application/json"}
+
+    try:
+        r = requests.patch(api_url, headers=headers, data=data)
+        json_data = json.loads(r.text)
+        return matched_shot
+    except:
+        return False
 
 def updateLatestcut2(video,cut):
     record_endpoints = get_video_record_endpoints("Sandwich Editorial")
