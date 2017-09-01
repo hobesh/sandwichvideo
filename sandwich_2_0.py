@@ -59,7 +59,7 @@ shots_api_key = authy['airtable sandwich shots']['api_key']
 atProjects = authy['airtable sandwich projects']['api_url']
 atVideos = authy['airtable sandwich videos']['api_url']
 atClients = authy['airtable sandwich clients']['api_url']
-atShots = ['airtable sandwich shots']['api_url']
+atShots = authy['airtable sandwich shots']['api_url']
 
 
 
