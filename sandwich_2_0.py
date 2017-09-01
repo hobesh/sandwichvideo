@@ -3,7 +3,7 @@
 print "Sandwich V2.0 loaded..."
 
 import requests, json, datetime
-from fuzzwuzzy import process
+from fuzzywuzzy import process
 
 class Client:
     def __init__(self, record):
